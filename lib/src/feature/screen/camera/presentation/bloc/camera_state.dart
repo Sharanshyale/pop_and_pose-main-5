@@ -52,7 +52,7 @@ class CameraError extends CameraState {
 }
 
 class ThumbnailsFetchedState extends CameraState {
-  final List<String> thumbnailsList;
+  final List<Uint8List> thumbnailsList;
   ThumbnailsFetchedState(this.thumbnailsList);
 }
 

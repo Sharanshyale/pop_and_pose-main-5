@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'package:http/http.dart' as http;
+
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pop_and_pose/src/feature/screen/camera/domain/camera_service.dart';
@@ -42,7 +44,7 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
   FutureOr<void> _onPictureTaken(
       TakePictureEvent event, Emitter<CameraState> emit) async {
     try {
-      // Capture the image as Uint8List (make sure your camera service now returns this)
+      // Capture the image as Uint8List
       final imageBytes = await _cameraService.takePicture();
 
       // Emit the state with the captured image bytes
@@ -93,23 +95,40 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
     }
   }
 
-  Future<List<String>?> _onFetchThumbnailsList(
+  // Fetch thumbnails as Uint8List
+  Future<void> _onFetchThumbnailsList(
       FetchThumbnailsList event, Emitter<CameraState> emit) async {
     try {
-      final thumbnailsList = await _cameraService.getThumbnailsList();
-      print('list of thumbnails$thumbnailsList');
-      
-      if (thumbnailsList == null) {
-        emit(CameraError('Failed to fetch thumbnails'));
+      // Fetch thumbnail URLs
+      final thumbnailUrls = await _cameraService.getThumbnailsList();
+      if (thumbnailUrls == null || thumbnailUrls.isEmpty) {
+        emit(CameraError('No thumbnails found'));
+        return;
       }
 
-      emit(ThumbnailsFetchedState(thumbnailsList!));
+      // Download thumbnails as Uint8List
+      final List<Uint8List> thumbnails = [];
+      for (final url in thumbnailUrls) {
+        try {
+          final response = await http.get(Uri.parse(url));
+          if (response.statusCode == 200) {
+            thumbnails.add(response.bodyBytes);
+          } else {
+            Log.e('Failed to download thumbnail from $url');
+          }
+        } catch (e) {
+          Log.e('Error downloading thumbnail: $e');
+        }
+      }
 
-    
+      if (thumbnails.isEmpty) {
+        emit(CameraError('Failed to download thumbnails'));
+      } else {
+        emit(ThumbnailsFetchedState(thumbnails));
+      }
     } catch (e) {
-      emit(CameraError('Failed to fetch thumbnails list $e'));
+      emit(CameraError('Failed to fetch thumbnails list: $e'));
     }
-    return null;
   }
 
   Future<void> _setIsoValue(

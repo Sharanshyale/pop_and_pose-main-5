@@ -126,7 +126,7 @@ print("data is ${_extractThumbnailUrls(listData[CameraAPIConstants.url])}");
   List<String> _extractThumbnailUrls(List<dynamic> urls) {
     return urls
         .map((url) =>
-            url.contains('?') ? '$url&kind=display' : '$url?kind=display')
+            url.contains('?') ? '$url&kind=thumbnail' : '$url?kind=thumbnail')
         .toList()
         .reversed
         .take(8)

@@ -1,13 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
-
+ 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get/route_manager.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:pop_and_pose/src/constant/api_constants.dart';
 import 'package:pop_and_pose/src/constant/colors.dart';
 import 'package:pop_and_pose/src/feature/screen/camera/presentation/bloc/camera_bloc.dart';
@@ -20,74 +18,23 @@ import 'package:pop_and_pose/src/feature/widgets/app_texts.dart';
 import 'package:pop_and_pose/src/feature/widgets/containers.dart';
 import 'package:pop_and_pose/src/feature/widgets/progressindicator.dart';
 import 'package:http_parser/http_parser.dart';
-
+ 
 class PhotoSelector extends StatefulWidget {
   final Map<String, dynamic>? imageInfo;
   final String userId;
   final int? copies;
   const PhotoSelector(
       {super.key, this.imageInfo, this.copies, required this.userId});
-
+ 
   @override
   _PhotoSelectorState createState() => _PhotoSelectorState();
 }
-
+ 
 class _PhotoSelectorState extends State<PhotoSelector> {
   Map<int, Uint8List> selectedImages = {}; // Change the value type to Uint8List
   int countdown = 59;
   Timer? _timer;
-  Map<String, File> imageFiles = {};
-
-
-//   Future<File> _loadImage(String url) async {
-  
-//     if (imageFiles.containsKey(url)) {
-//       return imageFiles[url]!;
-//     }
-
-//     // Download the image from the URL
-//     final response = await http.get(Uri.parse(url));
-//     final bytes = response.bodyBytes;
-//     final tempDir = await Directory.systemTemp.createTemp();
-//     final file = File('${tempDir.path}/image.jpg');
-//     await file.writeAsBytes(bytes);
-
-//     // Cache the downloaded file
-//     imageFiles[url] = file;
-// print('printijng file$file');
-//     return file;
-//   }
-Future<File> _loadImage(String url) async {
-  try {
-    // Check if the file is already cached
-    if (imageFiles.containsKey(url)) {
-      return imageFiles[url]!;
-    }
-
-    final response = await http.get(Uri.parse(url)).timeout(
-      Duration(seconds: 30),  // Set the timeout duration
-    );
-
-    // Check if the response is valid
-    if (response.statusCode != 200) {
-      throw Exception('Failed to load image');
-    }
-
-    final bytes = response.bodyBytes;
-    final tempDir = await Directory.systemTemp.createTemp();
-    final file = File('${tempDir.path}/image.jpg');
-    await file.writeAsBytes(bytes);
-
-    // Cache the downloaded file
-    imageFiles[url] = file;
-
-    return file;
-  } catch (e) {
-    print("Error loading image from URL: $url - $e");
-    rethrow; // Re-throw the error after logging
-  }
-}
-
+ 
   // Handle image selection and store actual byte data
   void _handleImageSelection(Uint8List imageBytes) {
     if (selectedImages.containsValue(imageBytes)) {
@@ -105,7 +52,7 @@ Future<File> _loadImage(String url) async {
       }
     }
   }
-
+ 
   int getMaxImages() {
     if (widget.imageInfo != null && widget.imageInfo!['name'] != null) {
       switch (widget.imageInfo!['name']) {
@@ -123,7 +70,7 @@ Future<File> _loadImage(String url) async {
     }
     return 4;
   }
-
+ 
   // Start the countdown timer
   void startTimer() {
     stopTimer();
@@ -138,55 +85,50 @@ Future<File> _loadImage(String url) async {
       });
     });
   }
-
+ 
   void stopTimer() {
     _timer?.cancel();
   }
-
+ 
   @override
   void initState() {
     super.initState();
-    //startTimer();
-  context.read<CameraBloc>().add(FetchThumbnailsList());
-
+    startTimer();
+    context.read<CameraBloc>().add(FetchThumbnailsList());
   }
-
+ 
   @override
   void dispose() {
     stopTimer();
     super.dispose();
   }
-
-
-
-
+ 
   // Upload selected images to backend
-  Future<void> uploadImage(List<String> imagesToUpload) async {
+  Future<void> uploadImage() async {
     if (selectedImages.length < 4) {
       Get.snackbar('Error', 'Please select 4 images before uploading.');
       return;
     }
-
+ 
     // Prepare the data for uploading
     try {
       var request = http.MultipartRequest(
           'POST', Uri.parse(BaseurlForBackend.uploadimage));
-
+ 
       request.fields['userId'] = widget.userId;
-
-     // Add the selected images (stored as Uint8List) to the request
+ 
+      // Add the selected images (stored as Uint8List) to the request
       selectedImages.forEach((key, value) {
         request.files.add(http.MultipartFile.fromBytes(
           'images[]',
-        
           value, // Directly use the byte data (Uint8List)
           filename: 'image_$key.jpg',
           contentType: MediaType('image', 'jpeg'),
         ));
       });
-
+ 
       var response = await request.send();
-
+ 
       if (response.statusCode == 200) {
         final responseBody = await response.stream.bytesToString();
         final responseData = json.decode(responseBody);
@@ -201,20 +143,16 @@ Future<File> _loadImage(String url) async {
       Get.snackbar('Error', 'An error occurred while uploading images');
     }
   }
-
+ 
   @override
   Widget build(BuildContext context) {
-    
-    //return Text("rajat");
-    
     return BlocBuilder<CameraBloc, CameraState>(
-      builder: (context, state) {
-        List<String> thumbnailsList = [];
-        if (state is ThumbnailsFetchedState) {
-          thumbnailsList = state.thumbnailsList;
-          
-        }
-
+    builder: (context, state) {
+      List<Uint8List> thumbnailsList = [];
+      if (state is ThumbnailsFetchedState) {
+        thumbnailsList = state.thumbnailsList;
+      }
+ 
         return PopScope(
           canPop: true,
           onPopInvoked: (didPop) {
@@ -241,7 +179,7 @@ Future<File> _loadImage(String url) async {
                     final screenHeight = constraints.maxHeight;
                     final containerWidth =
                         screenWidth > 900 ? 900.0 : screenWidth * 0.9;
-
+ 
                     return Column(
                       children: [
                         // Timer
@@ -267,7 +205,7 @@ Future<File> _loadImage(String url) async {
                             ),
                           ),
                         ),
-
+ 
                         // Main Content
                         Expanded(
                           child: Center(
@@ -308,16 +246,12 @@ Future<File> _loadImage(String url) async {
                                                 Color.fromRGBO(21, 20, 38, 1),
                                           ),
                                           SizedBox(height: screenHeight * 0.02),
-                                          
-                                          
                                           Expanded(
                                             child: Row(
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
                                               children: [
                                                 // Grid of thumbnails
-                                              
-                                              
                                                 Expanded(
                                                   child: GridView.builder(
                                                     shrinkWrap: true,
@@ -341,13 +275,12 @@ Future<File> _loadImage(String url) async {
                                                           selectedImages
                                                               .containsValue(
                                                                   imagePath);
-
-
+ 
                                                       return GestureDetector(
                                                         onTap: () {
-                                                          // _handleImageSelection(
-                                                          //     imagePath
-                                                          //         as Uint8List);
+                                                          _handleImageSelection(
+                                                              imagePath
+                                                                  as Uint8List);
                                                         },
                                                         child: Container(
                                                           decoration:
@@ -370,40 +303,17 @@ Future<File> _loadImage(String url) async {
                                                                 BorderRadius
                                                                     .circular(
                                                                         12),
-
-                                                                      child: FutureBuilder<File>(
-                        future: _loadImage(imagePath),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
-                            return Center(child: CircularProgressIndicator());
-                          }
-
-                          if (snapshot.hasError) {
-                            return Center(child: Text('Error loading image'));
-                          }
-
-                          final file = snapshot.data!;
-                          return Image.file(
-                            file,
-                            fit: BoxFit.cover,
-                          );
-                        },
-                      ),
-                                                            // child:
-                                                             //     Image.network(
-                                                           //   imagePath,
-                                                            //   fit: BoxFit.cover,
-                                                            // ),
+                                                            child:
+                                                                Image.memory(
+            thumbnailsList[index],
+            fit: BoxFit.cover,
+          )
                                                           ),
                                                         ),
                                                       );
-                                                    
-                                                    
                                                     },
                                                   ),
                                                 ),
-
-                                                
                                                 SizedBox(
                                                     width: screenWidth * 0.2),
                                                 // Preview container
@@ -422,7 +332,7 @@ Future<File> _loadImage(String url) async {
                             ),
                           ),
                         ),
-
+ 
                         // Bottom Buttons
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 20),
@@ -459,7 +369,7 @@ Future<File> _loadImage(String url) async {
                                 ),
                                 child: AppBtn(
                                   onTap: () {
-                                    uploadImage(thumbnailsList); // Call the upload function
+                                    uploadImage(); // Call the upload function
                                   },
                                   child: const Texts(
                                     texts: 'Next',
@@ -483,7 +393,7 @@ Future<File> _loadImage(String url) async {
       },
     );
   }
-
+ 
   Widget getContainerWidget() {
     if (widget.imageInfo != null && widget.imageInfo!['name'] != null) {
       switch (widget.imageInfo!['name']) {
@@ -502,7 +412,7 @@ Future<File> _loadImage(String url) async {
     return contFour(selectedImages.cast<int, String>());
   }
 }
-
+ 
 Widget contOne(Map<int, String> selectedImages) {
   return Containers(
     width: 200,
@@ -550,7 +460,6 @@ Widget contOne(Map<int, String> selectedImages) {
                                   height: double.infinity,
                                 ),
                               )
-
                             : Text(
                                 '$i',
                                 style: const TextStyle(
@@ -572,7 +481,7 @@ Widget contOne(Map<int, String> selectedImages) {
     ),
   );
 }
-
+ 
 Widget contTwo(Map<int, String> selectedImages) {
   return Containers(
     width: 400,
@@ -644,7 +553,7 @@ Widget contTwo(Map<int, String> selectedImages) {
     ),
   );
 }
-
+ 
 Widget contFour(Map<int, String> selectedImages) {
   return Containers(
     width: 400,
@@ -711,7 +620,7 @@ Widget contFour(Map<int, String> selectedImages) {
     ),
   );
 }
-
+ 
 Widget sixthCont(Map<int, String> selectedImages) {
   return Containers(
     width: 400,
@@ -781,3 +690,4 @@ Widget sixthCont(Map<int, String> selectedImages) {
     ),
   );
 }
+ 
