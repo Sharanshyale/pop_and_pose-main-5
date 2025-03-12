@@ -1,5 +1,9 @@
+import 'dart:io';
+ 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:pop_and_pose/src/constant/app_spaces.dart';
 import 'package:pop_and_pose/src/constant/colors.dart';
 import 'package:pop_and_pose/src/feature/screen/choose_screen/page/choose_screen.dart';
@@ -7,37 +11,98 @@ import 'package:pop_and_pose/src/feature/screen/num_of_copies/widget/btn.dart';
 import 'package:pop_and_pose/src/feature/widgets/app_btn.dart';
 import 'package:pop_and_pose/src/feature/widgets/app_texts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+ 
+import 'package:http/http.dart' as http;
+ 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
-
+ 
   @override
   _SettingsPageState createState() => _SettingsPageState();
 }
-
+ 
 class _SettingsPageState extends State<SettingsPage> {
   String? selectedShutterSpeed;
   String? selectedAperture;
   String? selectedISO;
   bool ledRingFlash = false;
-  String selectedWhiteBalance = "Cloudy"; 
-
+  String selectedWhiteBalance = "Cloudy";
+  File? _selectedImage;
+  bool _isUploading = false;
+ 
   @override
   void initState() {
     super.initState();
     _loadSavedSettings();
   }
-
+ 
   Future<void> _loadSavedSettings() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      selectedShutterSpeed = prefs.getString('option1') ?? '5';  
-      selectedAperture = prefs.getString('option2') ?? '1';      
-      selectedISO = prefs.getString('option3') ?? '1';          
+      selectedShutterSpeed = prefs.getString('option1') ?? '5';
+      selectedAperture = prefs.getString('option2') ?? '1';
+      selectedISO = prefs.getString('option3') ?? '1';
       ledRingFlash = prefs.getBool('isToggled') ?? false;
     });
   }
-
+ 
+  Future<File?> pickImage() async {
+    if (Platform.isAndroid || Platform.isIOS) {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+      return image != null ? File(image.path) : null;
+    } else {
+      FilePickerResult? result =
+          await FilePicker.platform.pickFiles(type: FileType.image);
+      return result != null ? File(result.files.single.path!) : null;
+    }
+  }
+ 
+  Future<void> uploadImage(String deviceKey, File imageFile) async {
+    var url = Uri.parse(
+        'https://pop-pose-backend.vercel.app/api/background/update-background-image');
+ 
+    var request = http.MultipartRequest('PUT', url);
+    request.fields['device_key'] = deviceKey;
+    request.files.add(await http.MultipartFile.fromPath(
+      'background_image',
+      imageFile.path,
+    ));
+ 
+    try {
+      setState(() => _isUploading = true);
+      var response = await request.send();
+      setState(() => _isUploading = false);
+ 
+      if (response.statusCode == 200) {
+        print("Image uploaded successfully!");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Image uploaded successfully!")),
+        );
+      } else {
+        print("pload failed: ${response.statusCode}");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Upload failed!")),
+        );
+      }
+    } catch (e) {
+      setState(() => _isUploading = false);
+      print("Error: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Error uploading image!")),
+      );
+    }
+  }
+ 
+  void selectAndUploadImage() async {
+    File? imageFile = await pickImage();
+ 
+    if (imageFile != null) {
+      setState(() => _selectedImage = imageFile);
+      await uploadImage('Hello device 2', imageFile);
+    }
+  }
+ 
   Future<void> _saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('option1', selectedShutterSpeed ?? '5');
@@ -46,7 +111,7 @@ class _SettingsPageState extends State<SettingsPage> {
     await prefs.setBool('isToggled', ledRingFlash);
     _printSavedSettings();
   }
-
+ 
   Future<void> _printSavedSettings() async {
     final prefs = await SharedPreferences.getInstance();
     print('------------------------------------');
@@ -57,7 +122,7 @@ class _SettingsPageState extends State<SettingsPage> {
     print('Toggle: ${prefs.getBool('isToggled')}');
     print('------------------------------------');
   }
-
+ 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -113,22 +178,23 @@ class _SettingsPageState extends State<SettingsPage> {
                                   color: AppColor.textColorBlack,
                                   fontWeight: FontWeight.w600,
                                 ),
-                                
                                 DropdownButtonFormField<String>(
-                                  hint:  const Texts(
-                                  texts: "Select Shutter Speed",
-                                  fontSize: 18,
-                                  color: AppColor.textColorGrey,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                                 // value: selectedShutterSpeed, 
+                                  hint: const Texts(
+                                    texts: "Select Shutter Speed",
+                                    fontSize: 18,
+                                    color: AppColor.textColorGrey,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                  // value: selectedShutterSpeed,
                                   decoration: const InputDecoration(
                                     border: OutlineInputBorder(
-                                      borderSide: BorderSide(color: AppColor.kAppColorGrey),
+                                      borderSide: BorderSide(
+                                          color: AppColor.kAppColorGrey),
                                     ),
                                   ),
-                                  items: ['5', '2', '3'] 
-                                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                                  items: ['5', '2', '3']
+                                      .map((e) => DropdownMenuItem(
+                                          value: e, child: Text(e)))
                                       .toList(),
                                   onChanged: (val) {
                                     setState(() {
@@ -144,17 +210,18 @@ class _SettingsPageState extends State<SettingsPage> {
                                   fontWeight: FontWeight.w600,
                                 ),
                                 DropdownButtonFormField<String>(
-                                  hint:  const Texts(
-                                  texts: "Aperture",
-                                  fontSize: 18,
-                                  color: AppColor.textColorGrey,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                                  //value: selectedAperture,  
+                                  hint: const Texts(
+                                    texts: "Aperture",
+                                    fontSize: 18,
+                                    color: AppColor.textColorGrey,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                  //value: selectedAperture,
                                   decoration: const InputDecoration(
                                       border: OutlineInputBorder()),
                                   items: ["1", "4", "8"]
-                                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                                      .map((e) => DropdownMenuItem(
+                                          value: e, child: Text(e)))
                                       .toList(),
                                   onChanged: (val) {
                                     setState(() {
@@ -164,7 +231,8 @@ class _SettingsPageState extends State<SettingsPage> {
                                 ),
                                 const SizedBox(height: 10),
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     const Texts(
                                       texts: "LED Ring Flash",
@@ -190,17 +258,18 @@ class _SettingsPageState extends State<SettingsPage> {
                                   fontWeight: FontWeight.w600,
                                 ),
                                 DropdownButtonFormField<String>(
-                                //  value: selectedISO,  
-                                hint:  const Texts(
-                                  texts: "Select ISO",
-                                  fontSize: 18,
-                                  color: AppColor.textColorGrey,
-                                  fontWeight: FontWeight.w800,
-                                ),
+                                  //  value: selectedISO,
+                                  hint: const Texts(
+                                    texts: "Select ISO",
+                                    fontSize: 18,
+                                    color: AppColor.textColorGrey,
+                                    fontWeight: FontWeight.w800,
+                                  ),
                                   decoration: const InputDecoration(
                                       border: OutlineInputBorder()),
                                   items: ["1", "2", "4"]
-                                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                                      .map((e) => DropdownMenuItem(
+                                          value: e, child: Text(e)))
                                       .toList(),
                                   onChanged: (val) {
                                     setState(() {
@@ -209,6 +278,37 @@ class _SettingsPageState extends State<SettingsPage> {
                                   },
                                 ),
                                 const SizedBox(height: 10),
+                                GestureDetector(
+                                  onTap: selectAndUploadImage,
+                                  child: Container(
+                                    height: 80,
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                          color: Colors.grey, width: 2),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: _selectedImage == null
+                                        ? const Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Icon(Icons.cloud_upload,
+                                                  size: 30, color: Colors.grey),
+                                              SizedBox(height: 10),
+                                              Text(
+                                                  "Tap to upload background image",
+                                                  style: TextStyle(
+                                                      color: Colors.grey)),
+                                            ],
+                                          )
+                                        : ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            child: Image.file(_selectedImage!,
+                                                fit: BoxFit.cover),
+                                          ),
+                                  ),
+                                ),
                                 const Texts(
                                   texts: "White Balance",
                                   fontSize: 18,
@@ -244,7 +344,8 @@ class _SettingsPageState extends State<SettingsPage> {
                                 width: 400,
                                 height: 400,
                                 decoration: const BoxDecoration(
-                                  borderRadius: BorderRadius.all(Radius.circular(15)),
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(15)),
                                   color: AppColor.kAppColorGrey,
                                 ),
                               ),
@@ -275,6 +376,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                   ),
                                 ],
                               ),
+                              const SizedBox(height: 20),
                             ],
                           ),
                         ),
@@ -289,7 +391,7 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
     );
   }
-
+ 
   Widget _buildRadio(String value) {
     return RadioListTile<String>(
       title: Text(value),

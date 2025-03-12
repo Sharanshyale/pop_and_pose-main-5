@@ -1,3 +1,4 @@
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
@@ -9,7 +10,6 @@ import 'package:pop_and_pose/src/feature/screen/camera/presentation/bloc/camera_
 import 'package:pop_and_pose/src/feature/screen/camera/presentation/bloc/camera_state.dart';
 import 'package:pop_and_pose/src/feature/screen/choose_frame/page/choose_frame.dart';
 import 'package:pop_and_pose/src/feature/screen/choose_screen/page/choose_screen.dart';
-import 'package:pop_and_pose/src/feature/screen/num_of_copies/page/num_of_copies.dart';
 import 'package:pop_and_pose/src/feature/screen/register_device/page/register_device.dart';
 import 'package:pop_and_pose/src/feature/screen/settings/page/settings.dart';
 import 'package:pop_and_pose/src/feature/widgets/app_texts.dart';
@@ -31,10 +31,12 @@ class _SplashScreenPageState extends State<SplashScreenPage>
     with SingleTickerProviderStateMixin {
   bool _isLoadingDialogShowing = false;
   late AnimationController _animationController;
+  String? _deviceInfo;
 
   @override
   void initState() {
     super.initState();
+    _getDeviceInfo();
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -48,6 +50,40 @@ class _SplashScreenPageState extends State<SplashScreenPage>
     super.dispose();
   }
 
+   Future<void> _getDeviceInfo() async {
+     DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
+ 
+    setState(() {
+     _deviceInfo = iosInfo.model;
+   
+    });
+  }
+
+  Future<bool> checkDeviceExists() async {
+    const String apiUrl =
+        "https://pop-pose-backend.vercel.app/api/background/devices";
+    try {
+      final response = await http.get(Uri.parse(apiUrl));
+ 
+      if (response.statusCode == 200) {
+        List<dynamic> devices = jsonDecode(response.body);
+        String? currentDeviceKey = _deviceInfo;
+        print('deviceModel $currentDeviceKey');
+ 
+        bool deviceExists =
+            devices.any((device) => device['device_key'] == currentDeviceKey);
+            print('object $deviceExists');
+        return deviceExists;
+      } else {
+        debugPrint("Failed to fetch devices: ${response.statusCode}");
+        return false;
+      }
+    } catch (e) {
+      debugPrint("Error fetching devices: $e");
+      return false;
+    }
+  }
   Future<void> _submitWithoutUser() async {
     // Prepare request body
     Map<String, String> requestBody = {
@@ -335,8 +371,21 @@ class _SplashScreenPageState extends State<SplashScreenPage>
       );
     } else {
       return GestureDetector(
-        onTap: () {
-        context.read<CameraBloc>().add(DiscoverCameraEvent());
+        onTap: () async
+         {
+          
+            bool exists = await checkDeviceExists();
+            if (exists) {
+              Get.offAll(() => const ChooseFrame(
+                    userId: '',
+                  ));
+             
+            } else {
+              Get.offAll(() =>
+                  const RegisterDevice());
+            }
+ 
+     //   context.read<CameraBloc>().add(DiscoverCameraEvent());
           
         //Get.offAll(() => const RegisterDevice());
       

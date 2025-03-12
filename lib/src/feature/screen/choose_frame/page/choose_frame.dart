@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get/route_manager.dart';
 import 'package:http/http.dart' as http;
@@ -27,6 +28,8 @@ class _ChooseFrameState extends State<ChooseFrame> {
   int? selectedImage;
   int countdown = 59;
   Timer? _timer;
+  String? backgroundImageUrl;
+  String? deviceModel;
 
   // List to store frames fetched from the API
   List<Map<String, dynamic>> framesData = [];
@@ -35,9 +38,42 @@ class _ChooseFrameState extends State<ChooseFrame> {
   void initState() {
     super.initState();
   //startTimer();
+  _getDeviceInfo();
     fetchFrames(); // Fetch frames data from the API
   }
-
+   
+  Future<void> _getDeviceInfo() async {
+    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
+ 
+    setState(() {
+      deviceModel = iosInfo.model;
+      //androidInfo.model;
+    });
+ 
+    if (deviceModel != null) {
+      fetchBackgroundImage(deviceModel!);
+    }
+  }
+  Future<void> fetchBackgroundImage(String deviceModel) async {
+    final String apiUrl =
+        'https://pop-pose-backend.vercel.app/api/background/getDeviceById/$deviceModel';
+ 
+    try {
+      final response = await http.get(Uri.parse(apiUrl));
+ 
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        setState(() {
+          backgroundImageUrl = data['background_image'];
+        });
+      } else {
+        print('Failed to load background image: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching background image: $e');
+    }
+  }
   // Fetch frames from the API
   Future<void> fetchFrames() async {
     try {
@@ -240,11 +276,11 @@ class _ChooseFrameState extends State<ChooseFrame> {
       child: Scaffold(
         body: Stack(
           children: [
-            Image.asset(
-              'images/background.png',
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: double.infinity,
+            Image.network(
+            backgroundImageUrl!,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
             ),
             SafeArea(
               child: Column(
