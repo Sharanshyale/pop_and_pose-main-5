@@ -14,6 +14,7 @@ import 'package:pop_and_pose/src/feature/screen/select_photo/page/select_photos.
 import 'package:pop_and_pose/src/feature/screen/splash_screen/page/splash_screen.dart';
 import 'package:pop_and_pose/src/feature/widgets/app_texts.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pop_and_pose/src/utils/getDeviceInfo.dart';
 
 class CapturePhotos extends StatefulWidget {
   final Map<String, dynamic>? imageInfo;
@@ -32,15 +33,32 @@ class _CapturePhotosState extends State<CapturePhotos> {
   int countdown = 3059;
   Timer? _timer;
   StreamSubscription<CameraState>? _cameraStateSubscription;
-
+  String? backgroundImageUrl;
+  String? deviceModel;
   @override
   void initState() {
     super.initState();
     _cameraBloc = context.read<CameraBloc>();
+    _getDeviceInfo();
     startTimer();
     _subscribeToCamera();
   }
-
+Future<void> _getDeviceInfo() async {
+    List<String> deviceInfo=await Getdeviceinformation().getDevice();
+ 
+    setState(() {
+      deviceModel = deviceInfo[0];
+   
+    });
+ 
+    if (deviceModel != null) {
+      String? imageUrl=await Getdeviceinformation().fetchBackgroundImage(deviceModel!);
+      setState(() {
+        backgroundImageUrl=imageUrl;
+      });
+        
+    }
+  }
   @override
   void dispose() {
     stopTimer();
@@ -165,10 +183,14 @@ class _CapturePhotosState extends State<CapturePhotos> {
             return Stack(
               fit: StackFit.expand,
               children: [
-                Image.asset(
-                  'images/background.png',
-                  fit: BoxFit.cover,
-                ),
+                 backgroundImageUrl != null
+              ? Image.network(
+                backgroundImageUrl!,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+              )
+              : const Center(child: CircularProgressIndicator()),
                 SafeArea(
                   child: LayoutBuilder(
                     builder: (context, constraints) {

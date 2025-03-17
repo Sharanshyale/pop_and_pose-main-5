@@ -15,6 +15,8 @@ import 'package:pop_and_pose/src/feature/screen/splash_screen/page/splash_screen
 import 'package:pop_and_pose/src/feature/widgets/app_btn.dart';
 import 'package:pop_and_pose/src/feature/widgets/app_texts.dart';
 import 'package:pop_and_pose/src/feature/widgets/progressindicator.dart';
+import 'package:pop_and_pose/src/utils/getDeviceInfo.dart';
+import 'package:step_progress_indicator/step_progress_indicator.dart';
 
 class ChooseFrame extends StatefulWidget {
   final String userId;
@@ -26,7 +28,7 @@ class ChooseFrame extends StatefulWidget {
 
 class _ChooseFrameState extends State<ChooseFrame> {
   int? selectedImage;
-  int countdown = 59;
+  int countdown = 800;
   Timer? _timer;
   String? backgroundImageUrl;
   String? deviceModel;
@@ -43,37 +45,22 @@ class _ChooseFrameState extends State<ChooseFrame> {
   }
    
   Future<void> _getDeviceInfo() async {
-    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-    IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
+    List<String> deviceInfo=await Getdeviceinformation().getDevice();
  
     setState(() {
-      deviceModel = iosInfo.model;
-      //androidInfo.model;
+      deviceModel = deviceInfo[0];
+   
     });
  
     if (deviceModel != null) {
-      fetchBackgroundImage(deviceModel!);
+      String? imageUrl=await Getdeviceinformation().fetchBackgroundImage(deviceModel!);
+      setState(() {
+        backgroundImageUrl=imageUrl;
+      });
+        
     }
   }
-  Future<void> fetchBackgroundImage(String deviceModel) async {
-    final String apiUrl =
-        'https://pop-pose-backend.vercel.app/api/background/getDeviceById/$deviceModel';
- 
-    try {
-      final response = await http.get(Uri.parse(apiUrl));
- 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        setState(() {
-          backgroundImageUrl = data['background_image'];
-        });
-      } else {
-        print('Failed to load background image: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error fetching background image: $e');
-    }
-  }
+  
   // Fetch frames from the API
   Future<void> fetchFrames() async {
     try {
@@ -204,17 +191,20 @@ class _ChooseFrameState extends State<ChooseFrame> {
   Widget _buildFrameGrid(BuildContext context) {
     return SizedBox(
       width: maxWidth(context),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: framesData
-            .asMap()
-            .map((index, frame) => MapEntry(
-                  index,
-                  buildImageContainer(frame, index),
-                ))
-            .values
-            .toList(),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: framesData
+              .asMap()
+              .map((index, frame) => MapEntry(
+                    index,
+                    buildImageContainer(frame, index),
+                  ))
+              .values
+              .toList(),
+        ),
       ),
     );
   }
@@ -276,12 +266,15 @@ class _ChooseFrameState extends State<ChooseFrame> {
       child: Scaffold(
         body: Stack(
           children: [
-            Image.network(
-            backgroundImageUrl!,
+
+            backgroundImageUrl != null
+              ? Image.network(
+                backgroundImageUrl!,
                 fit: BoxFit.cover,
                 width: double.infinity,
                 height: double.infinity,
-            ),
+              )
+              : const Center(child: CircularProgressIndicator()),
             SafeArea(
               child: Column(
                 children: [
@@ -353,17 +346,19 @@ class _ChooseFrameState extends State<ChooseFrame> {
                               ),
                             ),
                           ),
+                            const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 25),
+                    child: CircularProgressIndicatorContainer(
+                      progressValue: 0.1,
+                      horizontal: 120,
+                    ),
+                  ),
+                           
                         ],
                       ),
                     ),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 20),
-                    child: CircularProgressIndicatorContainer(
-                      progressValue: 0.05,
-                      horizontal: 180,
-                    ),
-                  ),
+                
                 ],
               ),
             ),

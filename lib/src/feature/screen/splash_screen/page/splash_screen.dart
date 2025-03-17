@@ -10,6 +10,7 @@ import 'package:pop_and_pose/src/feature/screen/camera/presentation/bloc/camera_
 import 'package:pop_and_pose/src/feature/screen/camera/presentation/bloc/camera_state.dart';
 import 'package:pop_and_pose/src/feature/screen/choose_frame/page/choose_frame.dart';
 import 'package:pop_and_pose/src/feature/screen/choose_screen/page/choose_screen.dart';
+import 'package:pop_and_pose/src/feature/screen/num_of_copies/page/num_of_copies.dart';
 import 'package:pop_and_pose/src/feature/screen/register_device/page/register_device.dart';
 import 'package:pop_and_pose/src/feature/screen/settings/page/settings.dart';
 import 'package:pop_and_pose/src/feature/widgets/app_texts.dart';
@@ -18,7 +19,11 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'package:get/get.dart';
+import 'package:pop_and_pose/src/feature/widgets/progressindicator.dart';
+
 import 'package:step_progress_indicator/step_progress_indicator.dart';
+
+import '../../../../utils/getDeviceInfo.dart';
 
 class SplashScreenPage extends StatefulWidget {
   const SplashScreenPage({super.key});
@@ -50,14 +55,17 @@ class _SplashScreenPageState extends State<SplashScreenPage>
     super.dispose();
   }
 
+
+
    Future<void> _getDeviceInfo() async {
-     DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-    IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
- 
-    setState(() {
-     _deviceInfo = iosInfo.model;
    
-    });
+   List<String> deviceInfo=await Getdeviceinformation().getDevice();
+setState(() {
+  _deviceInfo=deviceInfo[0];
+});
+ 
+  
+ 
   }
 
   Future<bool> checkDeviceExists() async {
@@ -111,7 +119,7 @@ class _SplashScreenPageState extends State<SplashScreenPage>
 
             if (userId.isNotEmpty) {
               Get.to(
-                () => ChooseScreenPage(userId: userId),
+                () => ChooseFrame(userId: userId),
               );
             } else {
               Get.snackbar("Error", "User ID is empty. Please try again.");
@@ -316,24 +324,13 @@ class _SplashScreenPageState extends State<SplashScreenPage>
                         ),
 
                         const SizedBox(height: 60),
-                        Container(
-                          padding: const EdgeInsets.all(15),
-                          width: 500,
-                          height: 35,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                            color: Colors.white,
-                          ),
-                          child: const StepProgressIndicator(
-                            totalSteps: 10,
-                            currentStep: 1,
-                            size: 4,
-                            padding: 0,
-                            selectedColor: Colors.black,
-                            unselectedColor: Color.fromARGB(255, 235, 231, 231),
-                            roundedEdges: Radius.circular(20),
-                          ),
-                        ),
+                       const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 25),
+                    child: CircularProgressIndicatorContainer(
+                      progressValue: 0.05,
+                      horizontal: 120,
+                    ),
+                  ),
                       ],
                     ),
                   ),
@@ -372,20 +369,18 @@ class _SplashScreenPageState extends State<SplashScreenPage>
     } else {
       return GestureDetector(
         onTap: () async
-         {
+        {
           
             bool exists = await checkDeviceExists();
             if (exists) {
-              Get.offAll(() => const ChooseFrame(
-                    userId: '',
-                  ));
-             
+           context.read<CameraBloc>().add(DiscoverCameraEvent());
+          
             } else {
               Get.offAll(() =>
                   const RegisterDevice());
             }
- 
-     //   context.read<CameraBloc>().add(DiscoverCameraEvent());
+
+   //    context.read<CameraBloc>().add(DiscoverCameraEvent());
           
         //Get.offAll(() => const RegisterDevice());
       

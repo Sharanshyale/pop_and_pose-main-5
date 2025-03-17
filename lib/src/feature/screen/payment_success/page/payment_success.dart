@@ -10,6 +10,7 @@ import 'package:pop_and_pose/src/feature/screen/splash_screen/page/splash_screen
 import 'package:pop_and_pose/src/feature/widgets/app_btn.dart';
 import 'package:pop_and_pose/src/feature/widgets/app_texts.dart';
 import 'package:pop_and_pose/src/feature/widgets/progressindicator.dart';
+import 'package:pop_and_pose/src/utils/getDeviceInfo.dart';
 
 class PaymentSuccessPage extends StatefulWidget {
   final String userId;
@@ -21,12 +22,15 @@ class PaymentSuccessPage extends StatefulWidget {
 }
 
 class _PaymentSuccessPageState extends State<PaymentSuccessPage> {
-  int countdown = 59;
+  int countdown = 800;
   Timer? _timer;
+     String? backgroundImageUrl;
+  String? deviceModel;
 
   @override
   void initState() {
     super.initState();
+      _getDeviceInfo();
     startTimer();
   }
 
@@ -50,7 +54,22 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage> {
   void stopTimer() {
     _timer?.cancel();
   }
-
+Future<void> _getDeviceInfo() async {
+    List<String> deviceInfo=await Getdeviceinformation().getDevice();
+ 
+    setState(() {
+      deviceModel = deviceInfo[0];
+   
+    });
+ 
+    if (deviceModel != null) {
+      String? imageUrl=await Getdeviceinformation().fetchBackgroundImage(deviceModel!);
+      setState(() {
+        backgroundImageUrl=imageUrl;
+      });
+        
+    }
+  }
   @override
   void dispose() {
     stopTimer();
@@ -89,12 +108,14 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage> {
             return Stack(
               fit: StackFit.expand,
               children: [
-                Image.asset(
-                  'images/background.png',
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  height: double.infinity,
-                ),
+                backgroundImageUrl != null
+              ? Image.network(
+                backgroundImageUrl!,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+              )
+              : const Center(child: CircularProgressIndicator()),
                 SafeArea(
                   child: Column(
                     children: [

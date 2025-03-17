@@ -2,11 +2,9 @@ import 'dart:io';
  
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:pop_and_pose/src/constant/app_spaces.dart';
 import 'package:pop_and_pose/src/constant/colors.dart';
-import 'package:pop_and_pose/src/feature/screen/choose_screen/page/choose_screen.dart';
+
 import 'package:pop_and_pose/src/feature/screen/num_of_copies/widget/btn.dart';
 import 'package:pop_and_pose/src/feature/widgets/app_btn.dart';
 import 'package:pop_and_pose/src/feature/widgets/app_texts.dart';
@@ -111,7 +109,7 @@ class _SettingsPageState extends State<SettingsPage> {
     await prefs.setBool('isToggled', ledRingFlash);
     _printSavedSettings();
   }
- 
+
   Future<void> _printSavedSettings() async {
     final prefs = await SharedPreferences.getInstance();
     print('------------------------------------');

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
- 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get/route_manager.dart';
@@ -13,11 +12,13 @@ import 'package:pop_and_pose/src/feature/screen/camera/presentation/bloc/camera_
 import 'package:pop_and_pose/src/feature/screen/camera/presentation/bloc/camera_state.dart';
 import 'package:pop_and_pose/src/feature/screen/print_screen/print_screen.dart';
 import 'package:pop_and_pose/src/feature/screen/splash_screen/page/splash_screen.dart';
+import 'package:pop_and_pose/src/feature/screen/testScreen/testScreen.dart';
 import 'package:pop_and_pose/src/feature/widgets/app_btn.dart';
 import 'package:pop_and_pose/src/feature/widgets/app_texts.dart';
 import 'package:pop_and_pose/src/feature/widgets/containers.dart';
 import 'package:pop_and_pose/src/feature/widgets/progressindicator.dart';
 import 'package:http_parser/http_parser.dart';
+import 'package:pop_and_pose/src/utils/getDeviceInfo.dart';
  
 class PhotoSelector extends StatefulWidget {
   final Map<String, dynamic>? imageInfo;
@@ -32,8 +33,10 @@ class PhotoSelector extends StatefulWidget {
  
 class _PhotoSelectorState extends State<PhotoSelector> {
   Map<int, Uint8List> selectedImages = {}; // Change the value type to Uint8List
-  int countdown = 59;
+  int countdown =800;
   Timer? _timer;
+    String? backgroundImageUrl;
+  String? deviceModel;
  
   // Handle image selection and store actual byte data
   void _handleImageSelection(Uint8List imageBytes) {
@@ -52,7 +55,22 @@ class _PhotoSelectorState extends State<PhotoSelector> {
       }
     }
   }
+ Future<void> _getDeviceInfo() async {
+    List<String> deviceInfo=await Getdeviceinformation().getDevice();
  
+    setState(() {
+      deviceModel = deviceInfo[0];
+   
+    });
+ 
+    if (deviceModel != null) {
+      String? imageUrl=await Getdeviceinformation().fetchBackgroundImage(deviceModel!);
+      setState(() {
+        backgroundImageUrl=imageUrl;
+      });
+        
+    }
+  }
   int getMaxImages() {
     if (widget.imageInfo != null && widget.imageInfo!['name'] != null) {
       switch (widget.imageInfo!['name']) {
@@ -94,6 +112,7 @@ class _PhotoSelectorState extends State<PhotoSelector> {
   void initState() {
     super.initState();
     startTimer();
+      _getDeviceInfo();
     context.read<CameraBloc>().add(FetchThumbnailsList());
   }
  
@@ -136,6 +155,9 @@ class _PhotoSelectorState extends State<PhotoSelector> {
         // Optionally navigate to the next screen
         // Get.to(() => PrintScreenPage(
         //     imageUrls: responseData['imageUrls'], copies: widget.copies));
+         Get.to(() => Testscreen(
+         ));
+        
       } else {
         Get.snackbar('Error', 'Failed to upload images');
       }
@@ -394,26 +416,43 @@ class _PhotoSelectorState extends State<PhotoSelector> {
     );
   }
  
-  Widget getContainerWidget() {
-    if (widget.imageInfo != null && widget.imageInfo!['name'] != null) {
-      switch (widget.imageInfo!['name']) {
-        case 'one':
-          return contOne(selectedImages.cast<int, String>());
-        case 'two':
-          return contTwo(selectedImages.cast<int, String>());
-        case 'three':
-          return contFour(selectedImages.cast<int, String>());
-        case 'four':
-          return sixthCont(selectedImages.cast<int, String>());
-        default:
-          return contFour(selectedImages.cast<int, String>());
-      }
+//   Widget getContainerWidget() {
+//     if (widget.imageInfo != null && widget.imageInfo!['name'] != null) {
+//       switch (widget.imageInfo!['name']) {
+//         case 'one':
+//           return contOne(selectedImages.cast<int, String>());
+//         case 'two':
+//           return contTwo(selectedImages.cast<int, String>());
+//         case 'three':
+//           return contFour(selectedImages.cast<int, String>());
+//         case 'four':
+//           return sixthCont(selectedImages.cast<int, String>());
+//         default:
+//           return contFour(selectedImages.cast<int, String>());
+//       }
+//     }
+//     return contFour(selectedImages.cast<int, String>());
+//   }
+// }
+ Widget getContainerWidget() {
+  if (widget.imageInfo != null && widget.imageInfo!['name'] != null) {
+    switch (widget.imageInfo!['name']) {
+      case 'one':
+        return contOne(selectedImages);
+      case 'two':
+        return contTwo(selectedImages);
+      case 'three':
+        return contFour(selectedImages);
+      case 'four':
+        return sixthCont(selectedImages);
+      default:
+        return contFour(selectedImages);
     }
-    return contFour(selectedImages.cast<int, String>());
   }
+  return contFour(selectedImages);
 }
- 
-Widget contOne(Map<int, String> selectedImages) {
+}
+contOne(Map<int, Uint8List> selectedImages){
   return Containers(
     width: 200,
     height: 600,
@@ -453,7 +492,7 @@ Widget contOne(Map<int, String> selectedImages) {
                         child: selectedImages.containsKey(i)
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
-                                child: Image.network(
+                                child: Image.memory(
                                   selectedImages[i]!,
                                   fit: BoxFit.cover,
                                   width: double.infinity,
@@ -482,7 +521,7 @@ Widget contOne(Map<int, String> selectedImages) {
   );
 }
  
-Widget contTwo(Map<int, String> selectedImages) {
+Widget contTwo(Map<int, Uint8List> selectedImages) {
   return Containers(
     width: 400,
     height: 600,
@@ -526,7 +565,7 @@ Widget contTwo(Map<int, String> selectedImages) {
                         child: selectedImages.containsKey(position)
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
-                                child: Image.network(
+                                child: Image.memory(
                                   selectedImages[position]!,
                                   fit: BoxFit.cover,
                                   width: double.infinity,
@@ -553,8 +592,8 @@ Widget contTwo(Map<int, String> selectedImages) {
     ),
   );
 }
- 
-Widget contFour(Map<int, String> selectedImages) {
+
+Widget contFour(Map<int, Uint8List> selectedImages) {
   return Containers(
     width: 400,
     height: 600,
@@ -594,7 +633,7 @@ Widget contFour(Map<int, String> selectedImages) {
                       child: selectedImages.containsKey(position)
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(12),
-                              child: Image.network(
+                              child: Image.memory(
                                 selectedImages[position]!,
                                 fit: BoxFit.cover,
                                 width: double.infinity,
@@ -621,7 +660,7 @@ Widget contFour(Map<int, String> selectedImages) {
   );
 }
  
-Widget sixthCont(Map<int, String> selectedImages) {
+Widget sixthCont(Map<int, Uint8List> selectedImages) {
   return Containers(
     width: 400,
     height: 600,
@@ -664,7 +703,7 @@ Widget sixthCont(Map<int, String> selectedImages) {
                       child: selectedImages.containsKey(position)
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(12),
-                              child: Image.network(
+                              child: Image.memory(
                                 selectedImages[position]!,
                                 fit: BoxFit.cover,
                                 width: double.infinity,
@@ -690,4 +729,3 @@ Widget sixthCont(Map<int, String> selectedImages) {
     ),
   );
 }
- 

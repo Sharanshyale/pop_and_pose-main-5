@@ -13,6 +13,9 @@ import 'package:pop_and_pose/src/feature/screen/payment_page/page/payment_page_s
 import 'package:pop_and_pose/src/feature/screen/splash_screen/page/splash_screen.dart';
 import 'package:pop_and_pose/src/feature/widgets/app_btn.dart';
 import 'package:pop_and_pose/src/feature/widgets/app_texts.dart';
+import 'package:pop_and_pose/src/feature/widgets/progressindicator.dart';
+import 'package:pop_and_pose/src/utils/getDeviceInfo.dart';
+import 'package:step_progress_indicator/step_progress_indicator.dart';
 
 class NumCopies extends StatefulWidget {
   final String userid;
@@ -27,14 +30,34 @@ class _NumCopiesState extends State<NumCopies> {
   int countdown = 8000;
   Timer? _timer;
   List<Map<String, dynamic>> availableCopies = [];
+   String? backgroundImageUrl;
+  String? deviceModel;
+
 
   @override
   void initState() {
     super.initState();
    // startTimer();
+   _getDeviceInfo();
     fetchCopies();
   }
-
+ Future<void> _getDeviceInfo() async {
+    List<String> deviceInfo=await Getdeviceinformation().getDevice();
+ 
+    setState(() {
+      deviceModel = deviceInfo[0];
+   
+    });
+ 
+    if (deviceModel != null) {
+      String? imageUrl=await Getdeviceinformation().fetchBackgroundImage(deviceModel!);
+      setState(() {
+        backgroundImageUrl=imageUrl;
+      });
+        
+    }
+  }
+  
   Future<void> fetchCopies() async {
     try {
       final response = await http.get(Uri.parse(BaseurlForBackend.getCopies));
@@ -161,12 +184,14 @@ class _NumCopiesState extends State<NumCopies> {
       child: Scaffold(
         body: Stack(
           children: [
-            Image.asset(
-              'images/background.png',
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: double.infinity,
-            ),
+             backgroundImageUrl != null
+              ? Image.network(
+                backgroundImageUrl!,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+              )
+              : const Center(child: CircularProgressIndicator()),
             SafeArea(
               child: Column(
                 children: [
@@ -196,100 +221,106 @@ class _NumCopiesState extends State<NumCopies> {
                     ),
                   ),
                   const SizedBox(height: 5),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      physics: const ClampingScrollPhysics(),
-                      child: Column(
-                        children: [
-                          Container(
-                        
-                              width: 700,
-                            constraints: BoxConstraints(
-                              minHeight:
-                                  MediaQuery.of(context).size.height * 0.75,
+                  SingleChildScrollView(
+                    physics: const ClampingScrollPhysics(),
+                    child: Column(
+                      children: [
+                        Container(
+                      
+                            width: 700,
+                          constraints: BoxConstraints(
+                            minHeight:
+                                MediaQuery.of(context).size.height * 0.75,
+                          ),
+                          margin: const EdgeInsets.symmetric(vertical: 20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 8,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 25.0),
+                                  child: Texts(
+                                    texts: 'Select The Number Of Copies',
+                                    fontSize: 28,
+                                    color: Color.fromRGBO(21, 20, 38, 1),
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(height: 60),
+                                Center(
+                                  child: Wrap(
+                                    spacing: 30,
+                                    runSpacing: 10,
+                                    children: availableCopies
+                                        .map((copy) =>
+                                            buildCopyContainer(copy))
+                                        .toList(),
+                                  ),
+                                ),
+                                const SizedBox(height: 40),
+                                Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Btn(
+                            onTap: () { 
+                            },
+                            width: 150,
+                            child: const Texts(
+                              texts: 'Back',
+                              fontSize: 22,
+                              fontWeight: FontWeight.w600,
+                              color: AppColor.kAppColor,
                             ),
-                            margin: const EdgeInsets.symmetric(vertical: 20),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 8,
-                                  spreadRadius: 2,
+                          ),
+                          const SizedBox(width: 25),
+                                    AppBtn(
+                                      onTap: () {
+                                        if (selectedCopyId != null) {
+                                          stopTimer();
+                                          _selectNoOfCopies(
+                                              widget.userid, selectedCopyId!);
+                                        } else {
+                                          ToasterService.error(
+                                              message:
+                                                  'Please select copies before proceeding.');
+                                        }
+                                      },
+                                      width: 150,
+                                      child: const Texts(
+                                        texts: 'Next',
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(20),
-                              child: Column(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Padding(
-                                    padding: EdgeInsets.only(top: 25.0),
-                                    child: Texts(
-                                      texts: 'Select The Number Of Copies',
-                                      fontSize: 28,
-                                      color: Color.fromRGBO(21, 20, 38, 1),
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 60),
-                                  Center(
-                                    child: Wrap(
-                                      spacing: 30,
-                                      runSpacing: 10,
-                                      children: availableCopies
-                                          .map((copy) =>
-                                              buildCopyContainer(copy))
-                                          .toList(),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 40),
-                                  Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Btn(
-          onTap: () { 
-          },
-          width: 150,
-          child: const Texts(
-            texts: 'Back',
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-            color: AppColor.kAppColor,
-          ),
-        ),
-        const SizedBox(width: 25),
-                                      AppBtn(
-                                        onTap: () {
-                                          if (selectedCopyId != null) {
-                                            stopTimer();
-                                            _selectNoOfCopies(
-                                                widget.userid, selectedCopyId!);
-                                          } else {
-                                            ToasterService.error(
-                                                message:
-                                                    'Please select copies before proceeding.');
-                                          }
-                                        },
-                                        width: 150,
-                                        child: const Texts(
-                                          texts: 'Next',
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
+                    ),
+                  ),
+                 
+                const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 25),
+                    child: CircularProgressIndicatorContainer(
+                      progressValue: 0.2,
+                      horizontal: 120,
                     ),
                   ),
                 ],
