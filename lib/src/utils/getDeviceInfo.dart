@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 class Getdeviceinformation{
 
+
   Future<List<String>> getDevice() async {
      DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
     IosDeviceInfo iosInfo = await deviceInfo.iosInfo;

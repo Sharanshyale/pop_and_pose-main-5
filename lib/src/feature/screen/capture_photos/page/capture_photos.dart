@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use, library_prefixes, library_private_types_in_public_api
 
 import 'dart:async';
+import 'dart:convert';
 import 'package:get/get.dart' as GetNavigator;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -12,9 +13,15 @@ import 'package:pop_and_pose/src/feature/screen/camera/presentation/bloc/camera_
 import 'package:pop_and_pose/src/feature/screen/camera/widget/live_view_widget.dart';
 import 'package:pop_and_pose/src/feature/screen/select_photo/page/select_photos.dart';
 import 'package:pop_and_pose/src/feature/screen/splash_screen/page/splash_screen.dart';
+import 'package:pop_and_pose/src/feature/widgets/app_btn.dart';
 import 'package:pop_and_pose/src/feature/widgets/app_texts.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pop_and_pose/src/utils/getDeviceInfo.dart';
+import 'package:http/http.dart' as http;
+
+
+
+
 
 class CapturePhotos extends StatefulWidget {
   final Map<String, dynamic>? imageInfo;
@@ -35,6 +42,8 @@ class _CapturePhotosState extends State<CapturePhotos> {
   StreamSubscription<CameraState>? _cameraStateSubscription;
   String? backgroundImageUrl;
   String? deviceModel;
+   Timer? autoCaptureTimer; 
+  int currentPhoto = 0; 
   @override
   void initState() {
     super.initState();
@@ -42,6 +51,7 @@ class _CapturePhotosState extends State<CapturePhotos> {
     _getDeviceInfo();
     startTimer();
     _subscribeToCamera();
+    startAutoCaptureTimer();
   }
 Future<void> _getDeviceInfo() async {
     List<String> deviceInfo=await Getdeviceinformation().getDevice();
@@ -63,6 +73,7 @@ Future<void> _getDeviceInfo() async {
   void dispose() {
     stopTimer();
     _cameraStateSubscription?.cancel();
+     autoCaptureTimer?.cancel(); 
     super.dispose();
   }
 
@@ -110,7 +121,57 @@ Future<void> _getDeviceInfo() async {
   void stopTimer() {
     _timer?.cancel();
   }
+    void startAutoCaptureTimer() async {
+final duration1= await fetchDuration(1)??7;
+final duration2=await fetchDuration(2)??5;
+  print("Duration1 : $duration1");
+  print("Duration2 : $duration2");
 
+    autoCaptureTimer = Timer(Duration(seconds: duration1), () {
+      takePicture(); 
+      autoCaptureTimer = Timer.periodic(Duration(seconds: duration2), (timer) {
+        takePicture();
+      });
+    });
+  }
+
+  Future<int?> fetchDuration(int timerId) async {
+  try {
+    final response = await http.post(
+      Uri.parse("https://pop-pose-backend.vercel.app/api/time/getTimer/$timerId"),
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+     print('data:$data');
+      if (data.containsKey('value')) {
+          print("Fetched duration: ${data['value']}");
+        return data['value']; 
+      } else {
+        print('Value not found in the response');
+        return null;
+      }
+    } else {
+      print('Failed to fetch duration from backend');
+      return null;
+    }
+  } catch (e) {
+    print('Error fetching duration: $e');
+    return null;
+  }
+}
+
+ void takePicture() {
+   
+    if (currentPhoto < 8) {
+      _cameraBloc.add(TakePictureEvent());
+      setState(() {
+        currentPhoto++;
+      });
+    } else {
+      autoCaptureTimer?.cancel();  
+    }
+  }
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -298,9 +359,11 @@ Future<void> _getDeviceInfo() async {
                                             flex: 1,
                                             child: Align(
                                               alignment: Alignment.centerRight,
-                                              child: ElevatedButton(
-                                                onPressed: () {
-                                                  context
+                                              child: 
+                                              AppBtn(
+                                                width: 120,
+  onTap: (){
+     context
                                                       .read<CameraBloc>()
                                                       .add(StopLiveViewEvent());
                                                   Get.to(() => PhotoSelector(
@@ -309,25 +372,44 @@ Future<void> _getDeviceInfo() async {
                                                         copies: widget.copies,
                                                         userId: widget.userId,
                                                       ));
-                                                },
-                                                style: ElevatedButton.styleFrom(
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            8),
-                                                  ),
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      horizontal: 16,
-                                                      vertical: 8),
+  },
+   child: const Texts(
+                                                  texts: 'Next',
+                                                  fontSize: 22,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.white,
                                                 ),
-                                                child: const Text(
-                                                  "Next",
-                                                  style:
+),
+                                              // ElevatedButton(
+                                              //   onPressed: () {
+                                              //     context
+                                              //         .read<CameraBloc>()
+                                              //         .add(StopLiveViewEvent());
+                                              //     Get.to(() => PhotoSelector(
+                                              //           imageInfo:
+                                              //               widget.imageInfo,
+                                              //           copies: widget.copies,
+                                              //           userId: widget.userId,
+                                              //         ));
+                                              //   },
+                                              //   style: ElevatedButton.styleFrom(
+                                              //     shape: RoundedRectangleBorder(
+                                              //       borderRadius:
+                                              //           BorderRadius.circular(
+                                              //               8),
+                                              //     ),
+                                              //     padding: const EdgeInsets
+                                              //         .symmetric(
+                                              //         horizontal: 16,
+                                              //         vertical: 8),
+                                              //   ),
+                                              //   child: const Text(
+                                              //     "Next",
+                                              //     style:
                                                   
-                                                      TextStyle(fontSize: 16),
-                                                ),
-                                              ),
+                                              //         TextStyle(fontSize: 16),
+                                              //   ),
+                                              // ),
                                             ),
                                           ),
                                         ],

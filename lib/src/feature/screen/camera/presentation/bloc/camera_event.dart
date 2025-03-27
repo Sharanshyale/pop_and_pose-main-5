@@ -5,6 +5,8 @@ abstract class CameraEvent extends Equatable {
   List<Object> get props => [];
 }
 
+
+
 class DiscoverCameraEvent extends CameraEvent {}
 
 class TakePictureEvent extends CameraEvent {}
@@ -27,4 +29,11 @@ class SetWhiteBalanceEvent extends CameraEvent {
   final String value;
 
   SetWhiteBalanceEvent(this.value);
+}
+
+
+class UpdateUserIdEvent extends CameraEvent {
+  final String userId;
+
+  UpdateUserIdEvent(this.userId);
 }

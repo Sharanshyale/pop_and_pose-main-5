@@ -24,6 +24,7 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
     on<StopLiveViewEvent>(_onStopLiveView);
     on<SetISOEvent>(_setIsoValue);
     on<SetWhiteBalanceEvent>(_setWhiteBalance);
+   
   }
 
   Future<void> _onDiscoverCamera(
@@ -101,6 +102,7 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
     try {
       // Fetch thumbnail URLs
       final thumbnailUrls = await _cameraService.getThumbnailsList();
+      print('hhhh$thumbnailUrls');
       if (thumbnailUrls == null || thumbnailUrls.isEmpty) {
         emit(CameraError('No thumbnails found'));
         return;
@@ -140,4 +142,7 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
       SetWhiteBalanceEvent event, Emitter<CameraState> emit) async {
     await _cameraService.setWhiteBalance(event.value);
   }
+
+
+  
 }

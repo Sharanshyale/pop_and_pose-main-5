@@ -152,7 +152,7 @@ Future<void> _getDeviceInfo() async {
                                   width: containerWidth,
                                   constraints: BoxConstraints(
                                     minHeight: screenHeight * 0.7,
-                                    maxHeight: screenHeight * 0.86,
+                                    maxHeight: screenHeight * 0.75,
                                   ),
                                   margin:
                                       const EdgeInsets.symmetric(vertical: 20),
@@ -220,7 +220,7 @@ Future<void> _getDeviceInfo() async {
 
                                         // Bottom-aligned button
                                         Positioned(
-                                          bottom: 20,
+                                          bottom: 80,
                                           left: 0,
                                           right: 0,
                                           child: Center(
@@ -256,13 +256,14 @@ Future<void> _getDeviceInfo() async {
                                 ),
                               ],
                             ),
+                            
                           ),
                         ),
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 20),
                         child: CircularProgressIndicatorContainer(
-                          progressValue: 0.2,
+                          progressValue: 0.4,
                           horizontal: screenWidth > 600 ? 180 : 50,
                         ),
                       ),

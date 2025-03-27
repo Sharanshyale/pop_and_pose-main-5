@@ -5,6 +5,8 @@ import 'package:equatable/equatable.dart';
 abstract class CameraState extends Equatable {
   @override
   List<Object?> get props => [];
+ String get userId => '';
+ 
 }
 
 class CameraInitialState extends CameraState {}
@@ -59,4 +61,19 @@ class ThumbnailsFetchedState extends CameraState {
 class IsoSetSuccessState extends CameraState {
   final int value;
   IsoSetSuccessState(this.value);
+}
+class UserState extends CameraState{
+final String userId;
+UserState({required this.userId})  ;
+  @override
+  List<Object?> get props => [userId];
+}
+
+class UserInitialState extends CameraState {
+
+}
+class UserUpdatedState extends CameraState {
+  final String userId;
+
+  UserUpdatedState(this.userId);
 }

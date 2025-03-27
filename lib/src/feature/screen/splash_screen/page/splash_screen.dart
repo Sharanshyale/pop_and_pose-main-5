@@ -116,8 +116,10 @@ setState(() {
 
           if (userObject != null && userObject.containsKey('_id')) {
             String userId = userObject['_id'] ?? ''; // Get user ID safely
+print('jjj$userId');
 
             if (userId.isNotEmpty) {
+           
               Get.to(
                 () => ChooseFrame(userId: userId),
               );
