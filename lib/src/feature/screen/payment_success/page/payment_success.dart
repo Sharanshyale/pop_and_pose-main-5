@@ -111,6 +111,7 @@ Future<void> _getDeviceInfo() async {
                 backgroundImageUrl != null
               ? Image.network(
                 backgroundImageUrl!,
+                
                 fit: BoxFit.cover,
                 width: double.infinity,
                 height: double.infinity,

@@ -31,19 +31,20 @@ class _PaymentPageScreenState extends State<PaymentPageScreen> {
   String? qrCodeUrl;
   String? qrCodeId;
   bool? isPaymentComplete;
+  int? amount;
  
   @override
   void initState() {
     super.initState();
-    print('${widget.userId}');
+    print('rrr${widget.userId}');
     fetchUserData();
-    createCustomerAndGenerateQR();
+    
     _getDeviceInfo();
  
     startTimer();
   }
  
-  Future<void> createCustomerAndGenerateQR() async {
+  Future<void> createCustomerAndGenerateQR(int amount) async {
     try {
       // Step 1: Create Razorpay Customer
       var customerResponse = await http.post(
@@ -76,9 +77,10 @@ class _PaymentPageScreenState extends State<PaymentPageScreen> {
             "name": "Payment for Order ${widget.userId}",
             "usage": "single_use",
             "fixed_amount": true,
-            "payment_amount":500,
-                // ('${userData?['frame_Selection']['price'] * userData?['no_of_copies']['Number']}' *
-                //     100),
+            "payment_amount":amount*100,
+            //500,
+              //  int.parse('${userData?['frame_Selection']['price'] * userData?['no_of_copies']['Number']}' *
+              //       100),
             "customer_id": customerId,
             "description": "Order Payment"
           }),
@@ -88,6 +90,7 @@ class _PaymentPageScreenState extends State<PaymentPageScreen> {
           var qrData = jsonDecode(qrResponse.body);
           setState(() {
             qrCodeUrl = qrData['image_url'];
+            qrCodeId = qrData['id'];
           });
         } else {
           throw Exception("Failed to generate QR code");
@@ -101,6 +104,7 @@ class _PaymentPageScreenState extends State<PaymentPageScreen> {
   }
  
   Future<void> checkPaymentStatus() async {
+    print("QR Code ID: $qrCodeId");
     if (qrCodeId == null) return;
     String apiUrl = "https://api.razorpay.com/v1/payments?qr_code_id=$qrCodeId";
  
@@ -113,6 +117,7 @@ class _PaymentPageScreenState extends State<PaymentPageScreen> {
     var response = await http.get(Uri.parse(apiUrl), headers: headers);
     if (response.statusCode == 200) {
       var jsonResponse = jsonDecode(response.body);
+      print('response123 $jsonResponse');
       if (jsonResponse['items'].isNotEmpty) {
         var payment = jsonResponse['items'][0];
         if (payment['status'] == 'captured') {
@@ -124,10 +129,7 @@ class _PaymentPageScreenState extends State<PaymentPageScreen> {
                 copies: userData?['no_of_copies']['Number'],
               ));
         } else {
-        Get.to(() => PaymentSuccessPage(
-                userId: widget.userId,
-                copies: userData?['no_of_copies']['Number'],
-              ));
+        
         }
       }
     }
@@ -150,7 +152,7 @@ class _PaymentPageScreenState extends State<PaymentPageScreen> {
   }
  
   // Fetch user data from the API
-  Future<void> fetchUserData() async {
+  Future<void>  fetchUserData() async {
     try {
       final response = await http.get(
         Uri.parse(
@@ -163,6 +165,8 @@ class _PaymentPageScreenState extends State<PaymentPageScreen> {
         setState(() {
           userData = data['user'];
         });
+        createCustomerAndGenerateQR(int.parse(
+            '${userData?['frame_Selection']['price'] * userData?['no_of_copies']['Number']}'));
       } else {
         ToasterService.error(message: 'Failed to fetch user data.');
       }
@@ -399,13 +403,13 @@ class _PaymentPageScreenState extends State<PaymentPageScreen> {
                                           AppBtn(
                                             onTap: () {
                                               stopTimer();
-                                             // checkPaymentStatus();
-                                              Get.to(() => PaymentSuccessPage(
-                                                    userId: widget.userId,
-                                                    copies: userData?[
-                                                            'no_of_copies']
-                                                        ['Number'],
-                                                  ));
+                                              checkPaymentStatus();
+                                              // Get.to(() => PaymentSuccessPage(
+                                              //       userId: widget.userId,
+                                              //       copies: userData?[
+                                              //               'no_of_copies']
+                                              //           ['Number'],
+                                              //     ));
                                             },
                                             width: 150,
                                             child: Texts(

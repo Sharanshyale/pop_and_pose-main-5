@@ -44,6 +44,7 @@ class _CapturePhotosState extends State<CapturePhotos> {
   String? deviceModel;
    Timer? autoCaptureTimer; 
   int currentPhoto = 0; 
+  int remainingTimeForAutoCapture = 0;
   @override
   void initState() {
     super.initState();
@@ -244,7 +245,7 @@ final duration2=await fetchDuration(2)??5;
             return Stack(
               fit: StackFit.expand,
               children: [
-                 backgroundImageUrl != null
+                backgroundImageUrl != null
               ? Image.network(
                 backgroundImageUrl!,
                 fit: BoxFit.cover,
